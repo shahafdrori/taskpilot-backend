@@ -68,8 +68,12 @@ export async function addTask(req: Request, res: Response) {
     location: body.location
   };
 
-  const result = await collection.insertOne(newTask);
-  const created = await collection.findOne({ _id: result.insertedId });
+  const insertRes = await collection.insertOne(newTask);
+  const created = await collection.findOne({ _id: insertRes.insertedId });
+
+  if (!created) {
+    throw new AppError({ status: 500, code: "INTERNAL_ERROR", message: "Failed to load created task" });
+  }
 
   res.status(201).json(toTaskResponse(created));
 }
@@ -80,7 +84,7 @@ export async function replaceTask(req: Request, res: Response) {
 
   const body = req.body as Task;
 
-  const result = await collection.findOneAndReplace(
+  const updated = await collection.findOneAndReplace(
     { _id: id },
     {
       name: body.name,
@@ -93,11 +97,11 @@ export async function replaceTask(req: Request, res: Response) {
     { returnDocument: "after" }
   );
 
-  if (!result.value) {
+  if (!updated) {
     throw new AppError({ status: 404, code: "NOT_FOUND", message: "Task not found" });
   }
 
-  res.status(200).json(toTaskResponse(result.value));
+  res.status(200).json(toTaskResponse(updated));
 }
 
 export async function patchTask(req: Request, res: Response) {
@@ -114,17 +118,17 @@ export async function patchTask(req: Request, res: Response) {
   if (patch.completed !== undefined) allowed.completed = patch.completed;
   if (patch.location !== undefined) allowed.location = patch.location;
 
-  const result = await collection.findOneAndUpdate(
+  const updated = await collection.findOneAndUpdate(
     { _id: id },
     { $set: allowed },
     { returnDocument: "after" }
   );
 
-  if (!result.value) {
+  if (!updated) {
     throw new AppError({ status: 404, code: "NOT_FOUND", message: "Task not found" });
   }
 
-  res.status(200).json(toTaskResponse(result.value));
+  res.status(200).json(toTaskResponse(updated));
 }
 
 export async function deleteTask(req: Request, res: Response) {
