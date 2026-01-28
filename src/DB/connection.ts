@@ -2,12 +2,13 @@
 import { MongoClient, type Db, type Collection } from "mongodb";
 import dotenv from "dotenv";
 import { AppError } from "../helpers/errors.ts";
+import type { Task } from "../model/TaskModel.ts";
 
 dotenv.config();
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
-let tasksCollection: Collection | null = null;
+let tasksCollection: Collection<Task> | null = null;
 
 function getConnectionString() {
   return process.env.DATABASE_URL || "mongodb://127.0.0.1:27017";
@@ -28,7 +29,7 @@ export async function connectToDB() {
   await client.connect();
 
   db = client.db(getDbName());
-  tasksCollection = db.collection("Tasks");
+  tasksCollection = db.collection<Task>("Tasks");
 
   await tasksCollection.createIndex({ subject: 1 });
   await tasksCollection.createIndex({ completed: 1 });
@@ -44,7 +45,7 @@ export async function disconnectFromDB() {
   tasksCollection = null;
 }
 
-export function getTasksCollection(): Collection {
+export function getTasksCollection(): Collection<Task> {
   if (!tasksCollection) {
     throw new AppError({
       status: 500,

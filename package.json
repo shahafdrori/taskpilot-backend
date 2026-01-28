@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/app.ts",
     "start": "tsx src/app.ts",
-    "test": "NODE_ENV=test jest --runInBand"
+    "test": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
   },
   "dependencies": {
     "cors": "^2.8.5",
