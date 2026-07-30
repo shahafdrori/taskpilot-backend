@@ -1,6 +1,6 @@
-// FILE: src/schema/TaskSchema.ts
 import Joi from "joi";
-import { SUBJECTS, type Task, type CreateTaskInput, type ReplaceTaskInput, type PatchTaskInput } from "../model/TaskModel.ts";
+
+import { SUBJECTS, type CreateTaskInput, type ReplaceTaskInput, type PatchTaskInput } from "../model/TaskModel.ts";
 
 const isoDateString = Joi.string()
   .pattern(/^\d{4}-\d{2}-\d{2}$/)

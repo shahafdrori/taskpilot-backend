@@ -1,6 +1,6 @@
-// FILE: src/controller/task.ts
 import type { Request, Response } from "express";
 import { ObjectId } from "mongodb";
+
 import { getTasksCollection } from "../DB/connection.ts";
 import { AppError } from "../helpers/errors.ts";
 import type { TaskResponse, Task } from "../model/TaskModel.ts";
@@ -21,30 +21,33 @@ function parseId(id: string) {
   if (!ObjectId.isValid(id)) {
     throw new AppError({ status: 400, code: "BAD_REQUEST", message: "Invalid id" });
   }
+
   return new ObjectId(id);
 }
 
 export async function getAllTasks(req: Request, res: Response) {
+  // call func
+  // func does all the code here
   const collection = getTasksCollection();
 
-  const q = req.query as any;
+  const query = req.query;
   const filter: any = {};
 
-  if (q.subject) filter.subject = q.subject;
-  if (typeof q.completed === "boolean") filter.completed = q.completed;
+  if (query.subject) filter.subject = query.subject;
+  if (typeof query.completed === "boolean") filter.completed = query.completed;
 
-  if (q.priorityMin !== undefined || q.priorityMax !== undefined) {
+  if (query.priorityMin !== undefined || query.priorityMax !== undefined) {
     filter.priority = {};
-    if (q.priorityMin !== undefined) filter.priority.$gte = q.priorityMin;
-    if (q.priorityMax !== undefined) filter.priority.$lte = q.priorityMax;
+    if (query.priorityMin !== undefined) filter.priority.$gte = query.priorityMin;
+    if (query.priorityMax !== undefined) filter.priority.$lte = query.priorityMax;
   }
 
   const docs = await collection.find(filter).sort({ _id: -1 }).toArray();
   res.status(200).json(docs.map(toTaskResponse));
 }
 
-export async function getTaskById(req: Request, res: Response) {
-  const collection = getTasksCollection();
+export const getTaskById = async (req: Request, res: Response) => {
+const collection = getTasksCollection();
   const id = parseId(String(req.params.id));
 
   const doc = await collection.findOne({ _id: id });
@@ -58,7 +61,7 @@ export async function getTaskById(req: Request, res: Response) {
 export async function addTask(req: Request, res: Response) {
   const collection = getTasksCollection();
 
-  const body = req.body as any;
+  const body = req.body;
   const newTask: Task = {
     name: body.name,
     subject: body.subject,
@@ -111,6 +114,7 @@ export async function patchTask(req: Request, res: Response) {
   const patch = req.body as Partial<Task>;
   const allowed: Partial<Task> = {};
 
+  // TODO: check gpt how to make it generic
   if (patch.name !== undefined) allowed.name = patch.name;
   if (patch.subject !== undefined) allowed.subject = patch.subject;
   if (patch.priority !== undefined) allowed.priority = patch.priority;
@@ -131,6 +135,7 @@ export async function patchTask(req: Request, res: Response) {
   res.status(200).json(toTaskResponse(updated));
 }
 
+// arrow func
 export async function deleteTask(req: Request, res: Response) {
   const collection = getTasksCollection();
   const id = parseId(String(req.params.id));

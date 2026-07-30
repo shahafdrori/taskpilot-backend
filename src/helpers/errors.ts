@@ -1,4 +1,3 @@
-// FILE: src/helpers/errors.ts
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "NOT_FOUND"

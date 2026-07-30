@@ -1,6 +1,6 @@
-// FILE: src/app.ts
 import express from "express";
 import cors from "cors";
+
 import indexRouter from "./index.ts";
 import { connectToDB } from "./DB/connection.ts";
 import { isAppError, AppError } from "./helpers/errors.ts";
@@ -16,7 +16,7 @@ app.use((_req, _res, next) => {
 });
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  if (isAppError(err)) {
+  if (isAppError(err)) 
     return res.status(err.status).json({
       error: {
         code: err.code,
@@ -24,7 +24,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
         details: err.details
       }
     });
-  }
+  
 
   console.error(err);
   return res.status(500).json({
@@ -37,7 +37,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 
 async function start() {
   await connectToDB();
-  const port = Number(process.env.PORT ?? 3000);
+  const port = Number(process.env.PORT ?? 3000); // same as url, dont put port in here, only read it from env, can cause bugs
 
   app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);

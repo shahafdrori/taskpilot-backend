@@ -1,10 +1,10 @@
-// FILE: src/model/TaskModel.ts
-export const SUBJECTS = ["Work", "Study", "Personal", "Health"] as const;
+export const SUBJECTS = ["Work", "Study", "Personal", "Health"] as const; // try not using as const 
+
 export type Subject = (typeof SUBJECTS)[number];
 
-export type LonLat = [number, number]; // [lon, lat]
+export type LonLat = [number, number];
 
-export type Task = {
+export type Task = { // renmember the options, dont write them in a comment
   name: string;
   subject: Subject;
   priority: number; // 1..10

@@ -1,4 +1,3 @@
-# FILE: docker-compose.yml
 services:
   mongodb:
     image: mongo:7
