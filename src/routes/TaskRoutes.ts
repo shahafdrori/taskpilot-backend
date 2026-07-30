@@ -1,13 +1,5 @@
 import express from "express";
 
-import { validateRequest } from "../helpers/ValidateRequest.ts";
-import {
-  createTaskBodySchema,
-  idParamSchema,
-  listTasksQuerySchema,
-  patchTaskBodySchema,
-  replaceTaskBodySchema
-} from "../schema/TaskSchema.ts";
 import {
   addTask,
   deleteAllTasks,
@@ -18,29 +10,55 @@ import {
   replaceTask
 } from "../controller/task.ts";
 import { asyncHandler } from "../helpers/asyncHandler.ts";
+import { validateRequest } from "../helpers/ValidateRequest.ts";
+import {
+  createTaskBodySchema,
+  idParamSchema,
+  listTasksQuerySchema,
+  patchTaskBodySchema,
+  replaceTaskBodySchema
+} from "../schema/TaskSchema.ts";
 
-const TasksRouter = express.Router();
+const tasksRouter = express.Router();
 
-TasksRouter.get("/", validateRequest(listTasksQuerySchema, "query"), asyncHandler(getAllTasks));
-TasksRouter.get("/:id", validateRequest(idParamSchema, "params"), asyncHandler(getTaskById));
+tasksRouter.get(
+  "/",
+  validateRequest(listTasksQuerySchema, "query"),
+  asyncHandler(getAllTasks)
+);
 
-TasksRouter.post("/", validateRequest(createTaskBodySchema, "body"), asyncHandler(addTask));
+tasksRouter.get(
+  "/:id",
+  validateRequest(idParamSchema, "params"),
+  asyncHandler(getTaskById)
+);
 
-TasksRouter.put(
+tasksRouter.post(
+  "/",
+  validateRequest(createTaskBodySchema, "body"),
+  asyncHandler(addTask)
+);
+
+tasksRouter.put(
   "/:id",
   validateRequest(idParamSchema, "params"),
   validateRequest(replaceTaskBodySchema, "body"),
   asyncHandler(replaceTask)
 );
 
-TasksRouter.patch(
+tasksRouter.patch(
   "/:id",
   validateRequest(idParamSchema, "params"),
   validateRequest(patchTaskBodySchema, "body"),
   asyncHandler(patchTask)
 );
 
-TasksRouter.delete("/:id", validateRequest(idParamSchema, "params"), asyncHandler(deleteTask));
-TasksRouter.delete("/", asyncHandler(deleteAllTasks));
+tasksRouter.delete(
+  "/:id",
+  validateRequest(idParamSchema, "params"),
+  asyncHandler(deleteTask)
+);
 
-export default TasksRouter;
+tasksRouter.delete("/", asyncHandler(deleteAllTasks));
+
+export default tasksRouter;

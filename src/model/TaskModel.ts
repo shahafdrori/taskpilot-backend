@@ -1,20 +1,39 @@
-export const SUBJECTS = ["Work", "Study", "Personal", "Health"] as const; // try not using as const 
+export type Subject = "Work" | "Study" | "Personal" | "Health";
 
-export type Subject = (typeof SUBJECTS)[number];
+export const SUBJECTS: readonly Subject[] = [
+  "Work",
+  "Study",
+  "Personal",
+  "Health"
+];
 
-export type LonLat = [number, number];
+export type LonLat = [longitude: number, latitude: number];
 
-export type Task = { // renmember the options, dont write them in a comment
+export type Task = {
   name: string;
   subject: Subject;
-  priority: number; // 1..10
-  date: string; // YYYY-MM-DD
+  priority: number;
+  date: string;
   completed: boolean;
   location: LonLat;
 };
 
 export type TaskResponse = Task & { id: string };
 
-export type CreateTaskInput = Omit<Task, "completed"> & { completed?: boolean };
+export type CreateTaskInput = Omit<Task, "completed"> & {
+  completed?: boolean;
+};
+
 export type ReplaceTaskInput = Task;
 export type PatchTaskInput = Partial<Task>;
+
+export type ListTasksQuery = {
+  subject?: Subject;
+  completed?: boolean;
+  priorityMin?: number;
+  priorityMax?: number;
+};
+
+export type TaskIdParams = {
+  id: string;
+};

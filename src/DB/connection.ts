@@ -1,50 +1,43 @@
 import { MongoClient, type Collection, type Db } from "mongodb";
-import dotenv from "dotenv";
+
+import { getDatabaseUrl } from "../config/env.ts";
 import { AppError } from "../helpers/errors.ts";
 import type { Task } from "../model/TaskModel.ts";
-
-dotenv.config();
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
 let tasksCollection: Collection<Task> | null = null;
-
-const getConnectionString = () =>
-  process.env.DATABASE_URL || "mongodb://127.0.0.1:27017"; // check which one is right and use it, dont use || for it
-// prefere using env for URL
-
-const getDbName = () => {
-  const explicit = process.env.DB_NAME;
-
-  if (explicit?.trim()) {
-    return explicit.trim();
-  }
-
-  return process.env.NODE_ENV === "test"
-    ? "taskpilot_test"
-    : "taskpilot";
-};
 
 export const connectToDB = async (): Promise<void> => {
   if (client && db && tasksCollection) {
     return;
   }
 
-  client = new MongoClient(getConnectionString());
-  await client.connect();
+  const nextClient = new MongoClient(getDatabaseUrl());
 
-  db = client.db(getDbName());
-  tasksCollection = db.collection<Task>("Tasks");
+  try {
+    await nextClient.connect();
 
-  await tasksCollection.createIndex({ subject: 1 });
-  await tasksCollection.createIndex({ completed: 1 });
-  await tasksCollection.createIndex({ priority: 1 });
+    const nextDb = nextClient.db();
+    const nextTasksCollection = nextDb.collection<Task>("Tasks");
+
+    await Promise.all([
+      nextTasksCollection.createIndex({ subject: 1 }),
+      nextTasksCollection.createIndex({ completed: 1 }),
+      nextTasksCollection.createIndex({ priority: 1 })
+    ]);
+
+    client = nextClient;
+    db = nextDb;
+    tasksCollection = nextTasksCollection;
+  } catch (error) {
+    await nextClient.close();
+    throw error;
+  }
 };
 
 export const disconnectFromDB = async (): Promise<void> => {
-  if (client) {
-    await client.close();
-  }
+  await client?.close();
 
   client = null;
   db = null;
@@ -56,7 +49,7 @@ export const getTasksCollection = (): Collection<Task> => {
     throw new AppError({
       status: 500,
       code: "DB_NOT_READY",
-      message: "DB not initialized. Call connectToDB() first.",
+      message: "Database is not initialized"
     });
   }
 

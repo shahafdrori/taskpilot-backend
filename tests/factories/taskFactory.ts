@@ -1,6 +1,11 @@
-import type { CreateTaskInput, ReplaceTaskInput } from "../../src/model/TaskModel.ts";
+import type {
+  CreateTaskInput,
+  ReplaceTaskInput
+} from "../../src/model/TaskModel.ts";
 
-export function makeCreateTask(overrides: Partial<CreateTaskInput> = {}): CreateTaskInput {
+export const makeCreateTask = (
+  overrides: Partial<CreateTaskInput> = {}
+): CreateTaskInput => {
   const base: CreateTaskInput = {
     name: "Build UI with React + MUI",
     subject: "Work",
@@ -11,9 +16,11 @@ export function makeCreateTask(overrides: Partial<CreateTaskInput> = {}): Create
   };
 
   return { ...base, ...overrides };
-}
+};
 
-export function makeReplaceTask(overrides: Partial<ReplaceTaskInput> = {}): ReplaceTaskInput {
+export const makeReplaceTask = (
+  overrides: Partial<ReplaceTaskInput> = {}
+): ReplaceTaskInput => {
   const base: ReplaceTaskInput = {
     name: "Updated name",
     subject: "Study",
@@ -24,4 +31,4 @@ export function makeReplaceTask(overrides: Partial<ReplaceTaskInput> = {}): Repl
   };
 
   return { ...base, ...overrides };
-}
+};

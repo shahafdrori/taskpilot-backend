@@ -1,9 +1,9 @@
 import express from "express";
 
-import TasksRouter from "./routes/TaskRoutes.ts";
+import tasksRouter from "./routes/TaskRoutes.ts";
 
 const indexRouter = express.Router();
 
-indexRouter.use("/tasks", TasksRouter);
+indexRouter.use("/tasks", tasksRouter);
 
 export default indexRouter;

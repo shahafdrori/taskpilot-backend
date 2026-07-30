@@ -1,9 +1,10 @@
-import express from "express";
 import cors from "cors";
+import express from "express";
 
-import indexRouter from "./index.ts";
+import { getNodeEnvironment, getPort } from "./config/env.ts";
 import { connectToDB } from "./DB/connection.ts";
-import { isAppError, AppError } from "./helpers/errors.ts";
+import { AppError, isAppError } from "./helpers/errors.ts";
+import indexRouter from "./index.ts";
 
 export const app = express();
 
@@ -12,38 +13,57 @@ app.use(cors());
 app.use(indexRouter);
 
 app.use((_req, _res, next) => {
-  next(new AppError({ status: 404, code: "NOT_FOUND", message: "Route not found" }));
+  next(
+    new AppError({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "Route not found"
+    })
+  );
 });
 
-app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  if (isAppError(err)) 
-    return res.status(err.status).json({
+app.use(
+  (
+    error: unknown,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    if (isAppError(error)) {
+      res.status(error.status).json({
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.details
+        }
+      });
+      return;
+    }
+
+    console.error(error);
+
+    res.status(500).json({
       error: {
-        code: err.code,
-        message: err.message,
-        details: err.details
+        code: "INTERNAL_ERROR",
+        message: "Internal server error"
       }
     });
-  
+  }
+);
 
-  console.error(err);
-  return res.status(500).json({
-    error: {
-      code: "INTERNAL_ERROR",
-      message: "Internal server error"
-    }
-  });
-});
-
-async function start() {
+const start = async (): Promise<void> => {
   await connectToDB();
-  const port = Number(process.env.PORT ?? 3000); // same as url, dont put port in here, only read it from env, can cause bugs
+
+  const port = getPort();
 
   app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
   });
-}
+};
 
-if (process.env.NODE_ENV !== "test") {
-  void start();
+if (getNodeEnvironment() !== "test") {
+  void start().catch((error: unknown) => {
+    console.error("Failed to start server", error);
+    process.exit(1);
+  });
 }

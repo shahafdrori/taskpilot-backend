@@ -1,61 +1,61 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 import type Joi from "joi";
 
 import { AppError } from "./errors.ts";
 
 type Target = "body" | "params" | "query";
+type ValidatedData = Partial<Record<Target, object>>;
 
-// try not using unknown, try giving it an actual type
-const replaceObjectInPlace = (target: unknown, value: unknown): void => {
-  if (!target || typeof target !== "object") return;
+const validatedDataKey = Symbol("validatedData");
 
-  const obj = target as Record<string, unknown>;
+type RequestWithValidatedData = Request & {
+  [validatedDataKey]?: ValidatedData;
+};
 
-  Object.keys(obj).forEach((key) => {
-    delete obj[key];
-  });
+export const getValidatedData = <T extends object>(
+  req: Request,
+  target: Target
+): T => {
+  const validatedRequest = req as RequestWithValidatedData;
+  const value = validatedRequest[validatedDataKey]?.[target];
 
-  if (value && typeof value === "object") 
-    Object.assign(obj, value as Record<string, unknown>);
-  
+  if (!value) {
+    throw new AppError({
+      status: 500,
+      code: "INTERNAL_ERROR",
+      message: `Validated ${target} data is missing`
+    });
+  }
+
+  return value as T;
 };
 
 export const validateRequest =
-  (schema: Joi.ObjectSchema, target: Target) =>
+  <T extends object>(schema: Joi.ObjectSchema<T>, target: Target) =>
   (req: Request, _res: Response, next: NextFunction): void => {
-    const data = req[target];
-
-    const { error, value } = schema.validate(data, {
+    const { error, value } = schema.validate(req[target], {
       abortEarly: true,
       stripUnknown: true,
-      convert: true,
+      convert: true
     });
 
     if (error) {
-      return next(
+      next(
         new AppError({
           status: 400,
           code: "VALIDATION_ERROR",
           message: error.details[0]?.message ?? "Validation error",
-          details: error.details,
-        }),
+          details: { validation: error.details }
+        })
       );
+      return;
     }
 
-    // check if you can write it in a better way, maybe extract to a different file or function, if you cant then keep it like this
-    switch (target) {
-      case "query":
-        replaceObjectInPlace(req.query, value);
-        break;
-
-      case "params":
-        replaceObjectInPlace(req.params, value);
-        break;
-
-      case "body":
-        req.body = value;
-        break;
-    }
+    const validatedRequest = req as RequestWithValidatedData;
+    validatedRequest[validatedDataKey] = {
+      ...validatedRequest[validatedDataKey],
+      [target]: value
+    };
 
     next();
   };

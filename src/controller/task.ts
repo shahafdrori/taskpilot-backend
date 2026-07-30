@@ -1,160 +1,85 @@
 import type { Request, Response } from "express";
-import { ObjectId } from "mongodb";
 
-import { getTasksCollection } from "../DB/connection.ts";
-import { AppError } from "../helpers/errors.ts";
-import type { TaskResponse, Task } from "../model/TaskModel.ts";
+import { getValidatedData } from "../helpers/ValidateRequest.ts";
+import type {
+  CreateTaskInput,
+  ListTasksQuery,
+  PatchTaskInput,
+  ReplaceTaskInput,
+  TaskIdParams
+} from "../model/TaskModel.ts";
+import * as taskService from "../services/taskService.ts";
 
-function toTaskResponse(doc: any): TaskResponse {
-  return {
-    id: String(doc._id),
-    name: String(doc.name),
-    subject: doc.subject,
-    priority: Number(doc.priority),
-    date: String(doc.date),
-    completed: Boolean(doc.completed),
-    location: [Number(doc.location?.[0]), Number(doc.location?.[1])]
-  };
-}
+export const getAllTasks = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const query = getValidatedData<ListTasksQuery>(req, "query");
+  const tasks = await taskService.getAllTasks(query);
 
-function parseId(id: string) {
-  if (!ObjectId.isValid(id)) {
-    throw new AppError({ status: 400, code: "BAD_REQUEST", message: "Invalid id" });
-  }
+  res.status(200).json(tasks);
+};
 
-  return new ObjectId(id);
-}
+export const getTaskById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { id } = getValidatedData<TaskIdParams>(req, "params");
+  const task = await taskService.getTaskById(id);
 
-export async function getAllTasks(req: Request, res: Response) {
-  // call func
-  // func does all the code here
-  const collection = getTasksCollection();
+  res.status(200).json(task);
+};
 
-  const query = req.query;
-  const filter: any = {};
+export const addTask = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const input = getValidatedData<CreateTaskInput>(req, "body");
+  const task = await taskService.addTask(input);
 
-  if (query.subject) filter.subject = query.subject;
-  if (typeof query.completed === "boolean") filter.completed = query.completed;
+  res.status(201).json(task);
+};
 
-  if (query.priorityMin !== undefined || query.priorityMax !== undefined) {
-    filter.priority = {};
-    if (query.priorityMin !== undefined) filter.priority.$gte = query.priorityMin;
-    if (query.priorityMax !== undefined) filter.priority.$lte = query.priorityMax;
-  }
+export const replaceTask = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { id } = getValidatedData<TaskIdParams>(req, "params");
+  const input = getValidatedData<ReplaceTaskInput>(req, "body");
+  const task = await taskService.replaceTask(id, input);
 
-  const docs = await collection.find(filter).sort({ _id: -1 }).toArray();
-  res.status(200).json(docs.map(toTaskResponse));
-}
+  res.status(200).json(task);
+};
 
-export const getTaskById = async (req: Request, res: Response) => {
-const collection = getTasksCollection();
-  const id = parseId(String(req.params.id));
+export const patchTask = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { id } = getValidatedData<TaskIdParams>(req, "params");
+  const input = getValidatedData<PatchTaskInput>(req, "body");
+  const task = await taskService.patchTask(id, input);
 
-  const doc = await collection.findOne({ _id: id });
-  if (!doc) {
-    throw new AppError({ status: 404, code: "NOT_FOUND", message: "Task not found" });
-  }
+  res.status(200).json(task);
+};
 
-  res.status(200).json(toTaskResponse(doc));
-}
+export const deleteTask = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { id } = getValidatedData<TaskIdParams>(req, "params");
 
-export async function addTask(req: Request, res: Response) {
-  const collection = getTasksCollection();
+  await taskService.deleteTask(id);
 
-  const body = req.body;
-  const newTask: Task = {
-    name: body.name,
-    subject: body.subject,
-    priority: body.priority,
-    date: body.date,
-    completed: body.completed ?? false,
-    location: body.location
-  };
+  res.status(200).json({
+    message: "Task deleted successfully"
+  });
+};
 
-  const insertRes = await collection.insertOne(newTask);
-  const created = await collection.findOne({ _id: insertRes.insertedId });
+export const deleteAllTasks = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  const deletedCount = await taskService.deleteAllTasks();
 
-  if (!created) {
-    throw new AppError({ status: 500, code: "INTERNAL_ERROR", message: "Failed to load created task" });
-  }
-
-  res.status(201).json(toTaskResponse(created));
-}
-
-export async function replaceTask(req: Request, res: Response) {
-  const collection = getTasksCollection();
-  const id = parseId(String(req.params.id));
-
-  const body = req.body as Task;
-
-  const updated = await collection.findOneAndReplace(
-    { _id: id },
-    {
-      name: body.name,
-      subject: body.subject,
-      priority: body.priority,
-      date: body.date,
-      completed: body.completed,
-      location: body.location
-    },
-    { returnDocument: "after" }
-  );
-
-  if (!updated) {
-    throw new AppError({ status: 404, code: "NOT_FOUND", message: "Task not found" });
-  }
-
-  res.status(200).json(toTaskResponse(updated));
-}
-
-export async function patchTask(req: Request, res: Response) {
-  const collection = getTasksCollection();
-  const id = parseId(String(req.params.id));
-
-  const patch = req.body as Partial<Task>;
-  const allowed: Partial<Task> = {};
-
-  // TODO: check gpt how to make it generic
-  if (patch.name !== undefined) allowed.name = patch.name;
-  if (patch.subject !== undefined) allowed.subject = patch.subject;
-  if (patch.priority !== undefined) allowed.priority = patch.priority;
-  if (patch.date !== undefined) allowed.date = patch.date;
-  if (patch.completed !== undefined) allowed.completed = patch.completed;
-  if (patch.location !== undefined) allowed.location = patch.location;
-
-  const updated = await collection.findOneAndUpdate(
-    { _id: id },
-    { $set: allowed },
-    { returnDocument: "after" }
-  );
-
-  if (!updated) {
-    throw new AppError({ status: 404, code: "NOT_FOUND", message: "Task not found" });
-  }
-
-  res.status(200).json(toTaskResponse(updated));
-}
-
-// arrow func
-export async function deleteTask(req: Request, res: Response) {
-  const collection = getTasksCollection();
-  const id = parseId(String(req.params.id));
-
-  const result = await collection.deleteOne({ _id: id });
-  if (result.deletedCount === 0) {
-    throw new AppError({ status: 404, code: "NOT_FOUND", message: "Task not found" });
-  }
-
-  res.status(200).json({ message: "Task deleted successfully" });
-}
-
-export async function deleteAllTasks(req: Request, res: Response) {
-  const collection = getTasksCollection();
-
-  if (process.env.NODE_ENV === "production") {
-    throw new AppError({ status: 403, code: "BAD_REQUEST", message: "Not allowed in production" });
-  }
-
-  const result = await collection.deleteMany({});
-  res.status(200).json({ deletedCount: result.deletedCount ?? 0 });
-}
+  res.status(200).json({ deletedCount });
+};
